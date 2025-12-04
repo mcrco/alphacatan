@@ -1,0 +1,33 @@
+[package]
+name = "catanatron-rs"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+name = "catanatron_rs"
+crate-type = ["rlib", "cdylib"]
+
+[features]
+default = []
+python = ["pyo3", "numpy", "ndarray"]
+
+[dependencies]
+itertools = "0.12"
+lazy_static = "1.5"
+once_cell = "1.19"
+rand = { version = "0.8", features = ["std"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+smallvec = "1.13"
+strum = { version = "0.26", features = ["derive"] }
+thiserror = "1.0"
+clap = { version = "4.5", features = ["derive"] }
+pyo3 = { version = "0.21", optional = true, features = ["extension-module", "abi3-py38"] }
+numpy = { version = "0.21", optional = true }
+ndarray = { version = "0.15", optional = true, features = ["std"] }
+
+[dependencies.uuid]
+version = "1.18.1"
+features = [
+    "v4",
+]
