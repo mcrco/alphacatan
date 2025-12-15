@@ -6,7 +6,7 @@ use crate::types::NodeRef;
 
 use super::NodeId;
 
-// GENERATED FULL MAPS
+// GENERATED FULL MAPS (copied from original Python engine)
 pub static MINI_NODE_IDS: Lazy<HashMap<(CubeCoord, NodeRef), NodeId>> = Lazy::new(|| {
     let mut map = HashMap::new();
     map.insert((CubeCoord::new(-2, 0, 2), NodeRef::North), 14);

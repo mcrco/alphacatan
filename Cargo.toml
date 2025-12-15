@@ -22,9 +22,12 @@ smallvec = "1.13"
 strum = { version = "0.26", features = ["derive"] }
 thiserror = "1.0"
 clap = { version = "4.5", features = ["derive"] }
+ratatui = "0.27"
+crossterm = "0.28"
 pyo3 = { version = "0.21", optional = true, features = ["extension-module", "abi3-py38"] }
 numpy = { version = "0.21", optional = true }
 ndarray = { version = "0.15", optional = true, features = ["std"] }
+plotters = { version = "0.3", features = ["bitmap_backend", "bitmap_encoder"] }
 
 [dependencies.uuid]
 version = "1.18.1"

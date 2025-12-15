@@ -364,7 +364,7 @@ fn initialize_tiles(
 
     for (coord, template_kind) in &template.topology {
         let (nodes, edges, next_autoinc) =
-            get_nodes_and_edges(&tiles, *coord, node_autoinc);
+            get_nodes_and_edges(&tiles, *coord, node_autoinc, template.node_lookup);
         node_autoinc = next_autoinc;
 
         match template_kind {
@@ -417,6 +417,7 @@ fn get_nodes_and_edges(
     tiles: &HashMap<CubeCoord, Tile>,
     coordinate: CubeCoord,
     mut node_autoinc: NodeId,
+    node_lookup: Option<&HashMap<(CubeCoord, NodeRef), NodeId>>,
 ) -> (NodeMap, EdgeMap, NodeId) {
     let mut nodes: HashMap<NodeRef, Option<NodeId>> = NodeRef::iter().map(|n| (n, None)).collect();
     let mut edges: HashMap<EdgeRef, Option<EdgeId>> = EdgeRef::iter().map(|e| (e, None)).collect();
@@ -511,8 +512,14 @@ fn get_nodes_and_edges(
         }
     }
 
-    for (_node_ref, node_entry) in nodes.iter_mut() {
+    for (node_ref, node_entry) in nodes.iter_mut() {
         if node_entry.is_none() {
+            if let Some(lookup) = node_lookup {
+                if let Some(id) = lookup.get(&(coordinate, *node_ref)) {
+                    *node_entry = Some(*id);
+                    continue;
+                }
+            }
             *node_entry = Some(node_autoinc);
             node_autoinc += 1;
         }
@@ -618,7 +625,7 @@ static BASE_TEMPLATE: Lazy<MapTemplate> = Lazy::new(|| MapTemplate {
         None,
     ],
     topology: base_topology(),
-    node_lookup: None,
+    node_lookup: Some(&node_ids::BASE_NODE_IDS),
 });
 
 static MINI_TEMPLATE: Lazy<MapTemplate> = Lazy::new(|| MapTemplate {
@@ -634,7 +641,7 @@ static MINI_TEMPLATE: Lazy<MapTemplate> = Lazy::new(|| MapTemplate {
         Some(Resource::Ore),
     ],
     topology: mini_topology(),
-    node_lookup: None,
+    node_lookup: Some(&node_ids::MINI_NODE_IDS),
 });
 
 fn base_topology() -> Vec<(CubeCoord, TileTemplate)> {
