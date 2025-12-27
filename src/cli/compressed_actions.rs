@@ -12,31 +12,31 @@ pub struct CompressedActionGroup {
 
 pub fn compress_actions(actions: &[GameAction]) -> Vec<CompressedActionGroup> {
     let mut groups: HashMap<String, CompressedActionGroup> = HashMap::new();
-    
+
     for (idx, action) in actions.iter().enumerate() {
         let key = group_key(action);
         let description = group_description(action);
-        
+
         let group = groups.entry(key).or_insert_with(|| CompressedActionGroup {
             action_type: action.action_type,
             description,
             actions: Vec::new(),
         });
-        
+
         group.actions.push((idx, action.clone()));
     }
-    
+
     // Sort actions within each group by their detailed description for consistent ordering
     for group in groups.values_mut() {
-        group.actions.sort_by(|(_, a), (_, b)| {
-            action_detail_label(a).cmp(&action_detail_label(b))
-        });
+        group
+            .actions
+            .sort_by(|(_, a), (_, b)| action_detail_label(a).cmp(&action_detail_label(b)));
     }
-    
+
     // Sort groups purely lexicographically by their description
     let mut groups: Vec<_> = groups.into_values().collect();
     groups.sort_by(|a, b| a.description.cmp(&b.description));
-    
+
     groups
 }
 
@@ -78,7 +78,9 @@ fn group_key(action: &GameAction) -> String {
             }
         }
         ActionType::Discard => {
-            if let ActionPayload::Resources(bundle) = &action.payload {
+            if let ActionPayload::Resource(res) = &action.payload {
+                format!("Discard:{:?}", res)
+            } else if let ActionPayload::Resources(bundle) = &action.payload {
                 format!("Discard:{}", summarize_bundle(bundle))
             } else {
                 "Discard".to_string()
@@ -115,7 +117,11 @@ fn group_description(action: &GameAction) -> String {
         ActionType::PlayRoadBuilding => "Play Road Building".to_string(),
         ActionType::MaritimeTrade => {
             if let ActionPayload::MaritimeTrade { give, receive } = &action.payload {
-                format!("Maritime Trade - give {}, receive {:?}", summarize_bundle(give), receive)
+                format!(
+                    "Maritime Trade - give {}, receive {:?}",
+                    summarize_bundle(give),
+                    receive
+                )
             } else {
                 "Maritime Trade".to_string()
             }
@@ -128,7 +134,9 @@ fn group_description(action: &GameAction) -> String {
             }
         }
         ActionType::Discard => {
-            if let ActionPayload::Resources(bundle) = &action.payload {
+            if let ActionPayload::Resource(res) = &action.payload {
+                format!("Discard {:?}", res)
+            } else if let ActionPayload::Resources(bundle) = &action.payload {
                 format!("Discard {}", summarize_bundle(bundle))
             } else {
                 "Discard".to_string()
@@ -143,7 +151,8 @@ fn group_description(action: &GameAction) -> String {
 }
 
 fn summarize_bundle(bundle: &crate::game::resources::ResourceBundle) -> String {
-    let parts: Vec<String> = bundle.iter()
+    let parts: Vec<String> = bundle
+        .iter()
         .filter(|(_, count)| *count > 0)
         .map(|(res, count)| format!("{}x{:?}", count, res))
         .collect();
@@ -158,11 +167,11 @@ pub fn display_compressed_actions(groups: &[CompressedActionGroup]) -> HashMap<u
     // Maps displayed_index -> original_index
     let mut index_map = HashMap::new();
     let mut displayed_idx = 0;
-    
+
     println!("\n{}", "-".repeat(80));
     println!("AVAILABLE ACTIONS:");
     println!("{}", "-".repeat(80));
-    
+
     for (group_idx, group) in groups.iter().enumerate() {
         if group.actions.len() == 1 {
             // Single action - show directly
@@ -172,30 +181,43 @@ pub fn display_compressed_actions(groups: &[CompressedActionGroup]) -> HashMap<u
             displayed_idx += 1;
         } else {
             // Multiple actions - show grouped
-            println!("[{}] {} ({} options) - use 'e{}' to expand", 
-                displayed_idx, group.description, group.actions.len(), group_idx);
+            println!(
+                "[{}] {} ({} options) - use 'e{}' to expand",
+                displayed_idx,
+                group.description,
+                group.actions.len(),
+                group_idx
+            );
             index_map.insert(displayed_idx, group_idx); // Store group index for expansion
             displayed_idx += 1;
         }
     }
-    
+
     index_map
 }
 
 pub fn expand_group(group: &CompressedActionGroup, start_index: usize) -> HashMap<usize, usize> {
     let mut index_map = HashMap::new();
-    
+
     // Build mapping without printing - TUI will handle display
     for (i, (original_idx, _action)) in group.actions.iter().enumerate() {
         let display_idx = start_index + i;
         index_map.insert(display_idx, *original_idx);
     }
-    
+
     index_map
 }
 
 pub fn action_detail_label(action: &GameAction) -> String {
     match action.action_type {
+        ActionType::Roll => {
+            if let ActionPayload::Dice(d1, d2) = &action.payload {
+                let sum = (*d1 as u16) + (*d2 as u16);
+                format!("Rolled {} + {} = {}", d1, d2, sum)
+            } else {
+                group_description(action)
+            }
+        }
         ActionType::BuildRoad => {
             if let ActionPayload::Edge(edge) = &action.payload {
                 format!("Edge ({}, {})", edge.0, edge.1)
@@ -218,18 +240,34 @@ pub fn action_detail_label(action: &GameAction) -> String {
             }
         }
         ActionType::MoveRobber => {
-            if let ActionPayload::Robber { tile_id, victim, resource } = &action.payload {
+            if let ActionPayload::Robber {
+                tile_id,
+                victim,
+                resource,
+            } = &action.payload
+            {
                 let parts: Vec<String> = vec![
                     Some(format!("tile {}", tile_id)),
                     victim.map(|v| format!("victim={}", v)),
                     resource.map(|r| format!("resource={:?}", r)),
-                ].into_iter().flatten().collect();
+                ]
+                .into_iter()
+                .flatten()
+                .collect();
                 parts.join(", ")
             } else {
                 "Move Robber".to_string()
             }
         }
+        ActionType::Discard => {
+            if let ActionPayload::Resource(res) = &action.payload {
+                format!("Discard {:?}", res)
+            } else if let ActionPayload::Resources(bundle) = &action.payload {
+                format!("Discard {}", summarize_bundle(bundle))
+            } else {
+                "Discard".to_string()
+            }
+        }
         _ => group_description(action),
     }
 }
-

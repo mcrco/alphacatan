@@ -80,6 +80,10 @@ impl PlayerState {
     pub fn matured_dev_card_count(&self, card: DevelopmentCard) -> usize {
         self.dev_cards.iter().filter(|c| **c == card).count()
     }
+    
+    pub fn fresh_dev_card_count(&self, card: DevelopmentCard) -> usize {
+        self.fresh_dev_cards.iter().filter(|c| **c == card).count()
+    }
 
     pub fn can_play_dev_card(&self, card: DevelopmentCard) -> bool {
         if self.has_played_dev_card_this_turn {

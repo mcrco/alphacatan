@@ -1,7 +1,7 @@
 use crate::game::action::GameAction;
 use crate::game::game::Game;
 use crate::players::{
-    BasePlayer, MCTSPlayer, RandomPlayer, ValueFunctionPlayer, ValueFunctionParams,
+    BasePlayer, MCTSPlayer, RandomPlayer, ValueFunctionParams, ValueFunctionPlayer,
 };
 use crate::types::Color;
 
@@ -64,15 +64,11 @@ pub fn create_player(code: &str, color: Color, params: Vec<&str>) -> Option<Play
         }
         "M" => {
             // First param: number of simulations, default SIMULATIONS
-            let num_sims = params
-                .get(0)
-                .and_then(|s| s.parse::<usize>().ok());
+            let num_sims = params.get(0).and_then(|s| s.parse::<usize>().ok());
             // Second param (optional): prunning flag (any value other than explicit "false" is treated as true)
             let prunning = params.get(1).map(|s| s.to_lowercase() != "false");
             Some(PlayerInstance::MCTS(MCTSPlayer::new(
-                color,
-                num_sims,
-                prunning,
+                color, num_sims, prunning,
             )))
         }
         _ => None,
@@ -84,7 +80,9 @@ pub fn print_player_help() {
     println!("{:<5} {:<25} {}", "CODE", "PLAYER", "DESCRIPTION");
     println!("{}", "-".repeat(80));
     for player in CLI_PLAYERS {
-        println!("{:<5} {:<25} {}", player.code, player.name, player.description);
+        println!(
+            "{:<5} {:<25} {}",
+            player.code, player.name, player.description
+        );
     }
 }
-

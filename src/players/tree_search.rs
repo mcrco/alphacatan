@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 
 use crate::game::{
-    action::{GameAction, ActionPayload},
+    action::{ActionPayload, GameAction},
     game::Game,
     state::{GamePhase, GameState, Structure},
 };
@@ -62,9 +62,7 @@ fn execute_move_robber(game: &Game, action: &GameAction) -> Vec<(Game, f64)> {
 
     let (tile_id, victim_opt) = match action.payload {
         ActionPayload::Robber {
-            tile_id,
-            victim,
-            ..
+            tile_id, victim, ..
         } => (tile_id, victim),
         _ => return execute_deterministic(game, action),
     };
@@ -144,12 +142,14 @@ pub fn execute_spectrum(game: &Game, action: &GameAction) -> Vec<(Game, f64)> {
 
 fn player_has_port(state: &GameState, player_idx: usize, port: Option<Resource>) -> bool {
     if let Some(nodes) = state.map.port_nodes.get(&port) {
-        nodes.iter().any(|node| match state.node_occupancy.get(node) {
-            Some(Structure::Settlement { player }) | Some(Structure::City { player }) => {
-                *player == player_idx
-            }
-            _ => false,
-        })
+        nodes
+            .iter()
+            .any(|node| match state.node_occupancy.get(node) {
+                Some(Structure::Settlement { player }) | Some(Structure::City { player }) => {
+                    *player == player_idx
+                }
+                _ => false,
+            })
     } else {
         false
     }
@@ -254,5 +254,3 @@ pub fn list_pruned_actions(game: &Game) -> Vec<GameAction> {
 
     actions
 }
-
-

@@ -4,8 +4,8 @@ use rand::seq::SliceRandom;
 
 use crate::game::action::GameAction;
 use crate::game::game::Game;
-use crate::players::tree_search::{execute_spectrum, list_pruned_actions};
 use crate::players::BasePlayer;
+use crate::players::tree_search::{execute_spectrum, list_pruned_actions};
 use crate::types::Color;
 
 const SIMULATIONS: usize = 10;
@@ -84,7 +84,7 @@ impl StateNode {
         if self.is_leaf() && !self.is_terminal() {
             self.expand();
         }
-        
+
         // Select best action and run playout
         let action = self.choose_best_action_for_selection();
         let result = self.playout();
@@ -94,7 +94,7 @@ impl StateNode {
         if result == Some(self.color) {
             self.wins += 1;
         }
-        
+
         // Update children if they exist
         if let Some(children) = self.children.get_mut(&action) {
             for (child, _) in children.iter_mut() {
@@ -169,7 +169,10 @@ impl StateNode {
 
         let actions: Vec<_> = self.game.state.legal_actions().to_vec();
         if actions.is_empty() {
-            return GameAction::new(self.game.state.current_player, crate::types::ActionType::EndTurn);
+            return GameAction::new(
+                self.game.state.current_player,
+                crate::types::ActionType::EndTurn,
+            );
         }
         actions[0].clone()
     }
@@ -199,21 +202,21 @@ impl StateNode {
         // Run a random playout to completion
         let mut game_copy = self.game.copy();
         let mut rng = rand::thread_rng();
-        
+
         // Use RandomPlayer logic for playout
         while game_copy.winning_color().is_none() && game_copy.state.turn < 1000 {
             let legal_actions = game_copy.state.legal_actions();
             if legal_actions.is_empty() {
                 break;
             }
-            
+
             if let Some(action) = legal_actions.choose(&mut rng) {
                 game_copy.execute(action.clone());
             } else {
                 break;
             }
         }
-        
+
         game_copy.winning_color()
     }
 }

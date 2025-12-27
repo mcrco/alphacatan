@@ -266,12 +266,16 @@ impl CatanMap {
 
     pub fn build_with_rng(map_type: MapType, rng: &mut impl rand::Rng) -> Self {
         match map_type {
-            MapType::Base => {
-                CatanMap::from_template_with_rng(MapTemplate::base(), MapShuffleOverrides::default(), rng)
-            }
-            MapType::Mini => {
-                CatanMap::from_template_with_rng(MapTemplate::mini(), MapShuffleOverrides::default(), rng)
-            }
+            MapType::Base => CatanMap::from_template_with_rng(
+                MapTemplate::base(),
+                MapShuffleOverrides::default(),
+                rng,
+            ),
+            MapType::Mini => CatanMap::from_template_with_rng(
+                MapTemplate::mini(),
+                MapShuffleOverrides::default(),
+                rng,
+            ),
             MapType::Tournament => build_tournament_map(),
         }
     }

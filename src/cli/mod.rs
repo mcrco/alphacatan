@@ -6,9 +6,10 @@ pub mod stats;
 pub mod tui;
 
 pub use board_display::{display_board, render_board_to_string};
-pub use compressed_actions::{compress_actions, expand_group, action_detail_label, CompressedActionGroup};
+pub use compressed_actions::{
+    CompressedActionGroup, action_detail_label, compress_actions, expand_group,
+};
 pub use human_player::HumanPlayer;
-pub use players::{create_player, print_player_help, CliPlayer, CLI_PLAYERS};
+pub use players::{CLI_PLAYERS, CliPlayer, create_player, print_player_help};
 pub use stats::{GameStats, StatisticsAccumulator};
 pub use tui::TuiApp;
-

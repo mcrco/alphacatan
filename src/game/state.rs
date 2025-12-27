@@ -1,5 +1,6 @@
 use std::collections::{HashMap, HashSet, VecDeque};
 
+use clap::error::Error;
 use rand::{Rng, SeedableRng, rngs::StdRng};
 use serde::{Deserialize, Serialize};
 
@@ -542,32 +543,32 @@ impl GameState {
         let Some(&required) = self.discard_targets.get(&action.player_index) else {
             return Err(GameError::IllegalAction);
         };
-        let bundle = match action.payload.clone() {
-            ActionPayload::Resources(res) => res,
-            ActionPayload::None => self.random_discard_bundle(action.player_index, required)?,
-            _ => {
-                return Err(GameError::InvalidPayload(
-                    "expected resource bundle for discard",
-                ));
-            }
-        };
-        if bundle.total() as u8 != required {
+        let discarded_resource = if let ActionPayload::Resource(res) = action.payload {
+            res
+        } else {
             return Err(GameError::InvalidPayload(
-                "discard payload does not match required cards",
+                "invalid payload for discard action. expected resource",
             ));
-        }
+        };
+        let mut bundle = ResourceBundle::zero();
+        bundle.add(discarded_resource, 1);
         self.players[action.player_index]
             .remove_resources(&bundle)
             .map_err(|_| GameError::InsufficientResources)?;
         self.bank.receive(&bundle);
         action.payload = ActionPayload::Resources(bundle);
 
-        self.discard_targets.remove(&action.player_index);
-        if let Some(next) = self.discard_queue.pop_front() {
-            self.current_player = next;
+        if required == 1 {
+            self.discard_targets.remove(&action.player_index);
+            if let Some(next) = self.discard_queue.pop_front() {
+                self.current_player = next;
+            } else {
+                self.pending_prompt = ActionPrompt::MoveRobber;
+                self.current_player = self.turn_owner;
+            }
         } else {
-            self.pending_prompt = ActionPrompt::MoveRobber;
-            self.current_player = self.turn_owner;
+            self.discard_targets
+                .insert(action.player_index, required - 1);
         }
         Ok(())
     }
@@ -1302,12 +1303,21 @@ impl GameState {
         }
         let player_idx = self.current_player;
         let player = &self.players[player_idx];
+        
+        let is_road_building = !player.road_limit_reached() && self.road_building_player == Some(player_idx) && self.road_building_free_roads > 0;
+        if is_road_building {
+            for edge in self.unique_edges() {
+                if self.validate_road_location(player_idx, edge, true).is_ok() {
+                    actions.push(
+                        GameAction::new(player_idx, ActionType::BuildRoad)
+                            .with_payload(ActionPayload::Edge(edge)),
+                    );
+                }
+            }
+        }
 
         if !self.awaiting_roll {
-            if (!player.road_limit_reached() && player.resources.can_afford(&COST_ROAD))
-                || (self.road_building_player == Some(player_idx)
-                    && self.road_building_free_roads > 0)
-            {
+            if !is_road_building && !player.road_limit_reached() && player.resources.can_afford(&COST_ROAD) {
                 for edge in self.unique_edges() {
                     if self.validate_road_location(player_idx, edge, true).is_ok() {
                         actions.push(
@@ -1356,7 +1366,18 @@ impl GameState {
     }
 
     fn legal_discard_actions(&self) -> Vec<GameAction> {
-        vec![GameAction::new(self.current_player, ActionType::Discard)]
+        let mut actions = Vec::new();
+        let player_resources = self.players[self.current_player].resources;
+        for (resource, count) in player_resources.iter() {
+            if count > 0 {
+                actions.push(
+                    GameAction::new(self.current_player, ActionType::Discard).
+                    with_payload(ActionPayload::Resource(resource))
+                );
+            }
+        }
+
+        actions
     }
 
     fn legal_move_robber_actions(&self) -> Vec<GameAction> {

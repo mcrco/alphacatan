@@ -228,7 +228,11 @@ fn count_buildable_nodes(game: &Game, player_idx: usize) -> usize {
     count
 }
 
-fn are_nodes_adjacent(game: &Game, node_a: crate::board::NodeId, node_b: crate::board::NodeId) -> bool {
+fn are_nodes_adjacent(
+    game: &Game,
+    node_a: crate::board::NodeId,
+    node_b: crate::board::NodeId,
+) -> bool {
     // Check if nodes share an edge
     for edge in game.state.map.node_edges.get(&node_a).unwrap_or(&vec![]) {
         if edge.0 == node_b || edge.1 == node_b {
@@ -286,5 +290,3 @@ fn number_probability(number: u8) -> f64 {
         _ => 0.0,
     }
 }
-
-

@@ -82,4 +82,3 @@ impl StatisticsAccumulator {
         self.stats.record_game(game, duration);
     }
 }
-

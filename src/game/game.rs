@@ -44,7 +44,7 @@ impl Game {
 
         let player = &players[current_idx];
         let action = player.decide(self, legal_actions);
-        
+
         if let Some(action) = action {
             self.execute(action.clone());
             Some(action)
@@ -72,7 +72,8 @@ impl Game {
                 }
                 // Then check other players (but limit to avoid checking all every time)
                 for (idx, player) in self.state.players.iter().enumerate() {
-                    if idx != self.state.current_player && player.total_points() >= self.vps_to_win {
+                    if idx != self.state.current_player && player.total_points() >= self.vps_to_win
+                    {
                         return Some(player.color);
                     }
                 }

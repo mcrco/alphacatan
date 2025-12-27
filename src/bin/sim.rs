@@ -1,12 +1,11 @@
 use std::str::FromStr;
 use std::time::Instant;
 
-use clap::Parser;
-use catanatron_rs::cli::{create_player, print_player_help, StatisticsAccumulator};
+use catanatron_rs::MapType;
+use catanatron_rs::cli::{StatisticsAccumulator, create_player, print_player_help};
 use catanatron_rs::game::{Game, GameConfig};
 use catanatron_rs::types::Color;
-use catanatron_rs::MapType;
-
+use clap::Parser;
 
 #[derive(Debug, Parser, Clone)]
 #[command(name = "catanatron-sim")]
@@ -84,11 +83,13 @@ fn main() {
         }
     }
 
-    let map_type = MapType::from_str(&args.map.to_uppercase())
-        .unwrap_or_else(|_| {
-            eprintln!("Error: Invalid map type '{}'. Use BASE, MINI, or TOURNAMENT", args.map);
-            std::process::exit(1);
-        });
+    let map_type = MapType::from_str(&args.map.to_uppercase()).unwrap_or_else(|_| {
+        eprintln!(
+            "Error: Invalid map type '{}'. Use BASE, MINI, or TOURNAMENT",
+            args.map
+        );
+        std::process::exit(1);
+    });
 
     // Run simulations
     let mut stats = StatisticsAccumulator::new();
@@ -234,14 +235,20 @@ fn run_parallel_simulations(
     }
 }
 
-fn print_summary(stats: &StatisticsAccumulator, players: &[catanatron_rs::cli::players::PlayerInstance]) {
+fn print_summary(
+    stats: &StatisticsAccumulator,
+    players: &[catanatron_rs::cli::players::PlayerInstance],
+) {
     println!("\n{}", "=".repeat(80));
     println!("SIMULATION SUMMARY");
     println!("{}", "=".repeat(80));
 
     // Player Summary
     println!("\nPlayer Summary:");
-    println!("{:<15} {:<10} {:<12} {:<12}", "Player", "Wins", "Win Rate", "Avg VP");
+    println!(
+        "{:<15} {:<10} {:<12} {:<12}",
+        "Player", "Wins", "Win Rate", "Avg VP"
+    );
     println!("{}", "-".repeat(50));
 
     for (idx, player) in players.iter().enumerate() {
@@ -293,8 +300,5 @@ fn print_summary(stats: &StatisticsAccumulator, players: &[catanatron_rs::cli::p
     println!("  Total Games: {}", stats.stats.games);
     println!("  Avg Turns: {:.2}", stats.stats.get_avg_turns());
     println!("  Avg Ticks: {:.2}", stats.stats.get_avg_ticks());
-    println!(
-        "  Avg Duration: {:.2?}",
-        stats.stats.get_avg_duration()
-    );
+    println!("  Avg Duration: {:.2?}", stats.stats.get_avg_duration());
 }

@@ -11,10 +11,10 @@ fn main() {
     };
 
     let map = CatanMap::build(map_type);
-    
+
     // Build a map from (x, y, z, node_ref) -> node_id
     let mut node_map: HashMap<(i32, i32, i32, &str), u16> = HashMap::new();
-    
+
     for (coord, tile) in &map.tiles {
         use catanatron_rs::types::NodeRef;
         let node_iter = match tile {
@@ -34,15 +34,14 @@ fn main() {
             node_map.insert((coord.x, coord.y, coord.z, node_ref_str), *node_id);
         }
     }
-    
+
     // Convert to JSON-serializable format
     let mut json_data: Vec<((i32, i32, i32), String, u16)> = node_map
         .iter()
         .map(|((x, y, z, nr), id)| ((*x, *y, *z), nr.to_string(), *id))
         .collect();
     json_data.sort();
-    
+
     let output = serde_json::to_string_pretty(&json_data).unwrap();
     println!("{}", output);
 }
-

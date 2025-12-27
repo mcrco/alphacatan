@@ -1,13 +1,13 @@
 use std::str::FromStr;
 
-use clap::Parser;
-use catanatron_rs::cli::{create_player, print_player_help, HumanPlayer};
+use catanatron_rs::MapType;
 use catanatron_rs::cli::players::PlayerInstance;
+use catanatron_rs::cli::{HumanPlayer, create_player, print_player_help};
 use catanatron_rs::game::action::GameAction;
 use catanatron_rs::game::{Game, GameConfig};
 use catanatron_rs::players::BasePlayer;
 use catanatron_rs::types::Color;
-use catanatron_rs::MapType;
+use clap::Parser;
 
 #[derive(Clone)]
 enum UnifiedPlayer {
@@ -79,15 +79,17 @@ fn main() {
 
     // Create human player (always Red)
     let human = UnifiedPlayer::Human(HumanPlayer::new(Color::Red));
-    
+
     // Create players array: human is always player 0 (Red), bot is player 1 (Blue)
     let players = vec![human, bot];
 
-    let map_type = MapType::from_str(&args.map.to_uppercase())
-        .unwrap_or_else(|_| {
-            eprintln!("Error: Invalid map type '{}'. Use BASE, MINI, or TOURNAMENT", args.map);
-            std::process::exit(1);
-        });
+    let map_type = MapType::from_str(&args.map.to_uppercase()).unwrap_or_else(|_| {
+        eprintln!(
+            "Error: Invalid map type '{}'. Use BASE, MINI, or TOURNAMENT",
+            args.map
+        );
+        std::process::exit(1);
+    });
 
     // Create game config for 2 players
     let config = GameConfig {
@@ -98,7 +100,10 @@ fn main() {
     };
 
     println!("Starting game: You (Red) vs Bot (Blue)");
-    println!("Map: {:?}, Victory Points to Win: {}", map_type, args.vps_to_win);
+    println!(
+        "Map: {:?}, Victory Points to Win: {}",
+        map_type, args.vps_to_win
+    );
     println!("{}", "=".repeat(80));
 
     // Create game
@@ -147,7 +152,7 @@ fn main() {
     println!("\n{}", "=".repeat(80));
     println!("FINAL STATS:");
     println!("{}", "=".repeat(80));
-    
+
     for (idx, player) in game.state.players.iter().enumerate() {
         let label = if idx == 0 { "YOU" } else { "BOT" };
         println!("\n{} ({:?}):", label, player.color);
@@ -159,4 +164,3 @@ fn main() {
     }
     println!("\nTotal Turns: {}", game.state.turn);
 }
-

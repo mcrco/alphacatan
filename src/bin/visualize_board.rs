@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 
 use catanatron_rs::board::{CatanMap, MapType, Tile};
-use catanatron_rs::coords::CubeCoord;
-use catanatron_rs::types::NodeRef;
+use catanatron_rs::coords::{CubeCoord, Direction};
+use catanatron_rs::types::{NodeRef, Resource};
 use plotters::prelude::*;
 
 const LAND_COLOR: RGBColor = RGBColor(0x8B, 0x45, 0x13); // SaddleBrown-ish
@@ -19,7 +19,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-fn render_map(map_type: MapType, filename: &str, hex_size: f64) -> Result<(), Box<dyn std::error::Error>> {
+fn render_map(
+    map_type: MapType,
+    filename: &str,
+    hex_size: f64,
+) -> Result<(), Box<dyn std::error::Error>> {
     let map = CatanMap::build(map_type);
 
     // Gather geometry
@@ -59,7 +63,7 @@ fn render_map(map_type: MapType, filename: &str, hex_size: f64) -> Result<(), Bo
     let width = ((max_x - min_x) + 2.0 * padding).ceil() as u32;
     let height = ((max_y - min_y) + 2.0 * padding).ceil() as u32;
 
-    let mut backend = BitMapBackend::new(filename, (width, height));
+    let backend = BitMapBackend::new(filename, (width, height));
     let root = backend.into_drawing_area();
     root.fill(&WHITE)?;
 
@@ -94,9 +98,39 @@ fn render_map(map_type: MapType, filename: &str, hex_size: f64) -> Result<(), Bo
     }
 
     // Draw node circles + labels
+    let mut node_centers: HashMap<u16, (f64, f64)> = HashMap::new();
     for (node_id, positions) in node_positions {
-        let (avg_x, avg_y) = average(&positions);
-        let (px, py) = to_canvas((avg_x, avg_y));
+        let center = average(&positions);
+        node_centers.insert(node_id, center);
+    }
+
+    let mut port_infos: Vec<PortInfo> = map
+        .ports_by_id
+        .values()
+        .filter_map(|port| {
+            let (a_ref, b_ref) = dock_node_refs(port.direction);
+            let a = port.nodes.get(&a_ref)?;
+            let b = port.nodes.get(&b_ref)?;
+            Some(PortInfo {
+                id: port.id,
+                resource: port.resource,
+                nodes: vec![*a, *b],
+            })
+        })
+        .collect();
+    port_infos.sort_by_key(|info| info.id);
+
+    let mut port_node_labels: HashMap<u16, String> = HashMap::new();
+    for port in map.ports_by_id.values() {
+        let (a_ref, b_ref) = dock_node_refs(port.direction);
+        if let (Some(a), Some(b)) = (port.nodes.get(&a_ref), port.nodes.get(&b_ref)) {
+            port_node_labels.insert(*a, format!("P{}", port.id));
+            port_node_labels.insert(*b, format!("P{}", port.id));
+        }
+    }
+
+    for (node_id, (avg_x, avg_y)) in &node_centers {
+        let (px, py) = to_canvas((*avg_x, *avg_y));
         let radius = (hex_size * 0.18).max(4.0) as i32;
 
         root.draw(&Circle::new(
@@ -107,6 +141,44 @@ fn render_map(map_type: MapType, filename: &str, hex_size: f64) -> Result<(), Bo
         root.draw(&Text::new(
             format!("{}", node_id),
             (px, py),
+            ("sans-serif", 12).into_font().color(&BLACK),
+        ))?;
+        if let Some(text) = port_node_labels.get(node_id) {
+            root.draw(&Text::new(
+                text.clone(),
+                (px, py + 14),
+                ("sans-serif", 10).into_font().color(&BLACK),
+            ))?;
+        }
+    }
+
+    // Annotate ports with node ids and trade info
+    for info in &port_infos {
+        let nodes_text = info
+            .nodes
+            .iter()
+            .map(|n| n.to_string())
+            .collect::<Vec<_>>()
+            .join(", ");
+        let trade_label = port_trade_label(info.resource);
+        println!(
+            "Port {:02} {:<8} nodes [{}]",
+            info.id, trade_label, nodes_text
+        );
+
+        let node_points: Vec<(f64, f64)> = info
+            .nodes
+            .iter()
+            .filter_map(|id| node_centers.get(id).copied())
+            .collect();
+        if node_points.is_empty() {
+            continue;
+        }
+        let (avg_x, avg_y) = average(&node_points);
+        let (px, py) = to_canvas((avg_x, avg_y));
+        root.draw(&Text::new(
+            trade_label,
+            (px, py - 16),
             ("sans-serif", 12).into_font().color(&BLACK),
         ))?;
     }
@@ -178,4 +250,27 @@ enum TileKind {
     Land,
     Water,
     Port,
+}
+
+struct PortInfo {
+    id: u16,
+    resource: Option<Resource>,
+    nodes: Vec<u16>,
+}
+
+fn dock_node_refs(direction: Direction) -> (NodeRef, NodeRef) {
+    match direction {
+        Direction::West => (NodeRef::NorthWest, NodeRef::SouthWest),
+        Direction::NorthWest => (NodeRef::North, NodeRef::NorthWest),
+        Direction::NorthEast => (NodeRef::NorthEast, NodeRef::North),
+        Direction::East => (NodeRef::SouthEast, NodeRef::NorthEast),
+        Direction::SouthEast => (NodeRef::South, NodeRef::SouthEast),
+        Direction::SouthWest => (NodeRef::SouthWest, NodeRef::South),
+    }
+}
+
+fn port_trade_label(resource: Option<Resource>) -> String {
+    resource
+        .map(|res| format!("{:?} 2:1", res))
+        .unwrap_or_else(|| "Any 3:1".to_string())
 }
