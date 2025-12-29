@@ -1,6 +1,5 @@
 use std::collections::{HashMap, HashSet, VecDeque};
 
-use clap::error::Error;
 use rand::{Rng, SeedableRng, rngs::StdRng};
 use serde::{Deserialize, Serialize};
 
@@ -950,35 +949,6 @@ impl GameState {
             self.pending_prompt = ActionPrompt::MoveRobber;
             self.current_player = self.turn_owner;
         }
-    }
-
-    fn random_discard_bundle(
-        &mut self,
-        player_idx: usize,
-        required: u8,
-    ) -> Result<ResourceBundle, GameError> {
-        if required == 0 {
-            return Ok(ResourceBundle::zero());
-        }
-        let mut temp_counts = self.players[player_idx].resources.counts();
-        let mut bundle = ResourceBundle::zero();
-        for _ in 0..required {
-            let mut bag = Vec::new();
-            for (idx, &amount) in temp_counts.iter().enumerate() {
-                let resource = Resource::ALL[idx];
-                for _ in 0..amount {
-                    bag.push(resource);
-                }
-            }
-            if bag.is_empty() {
-                break;
-            }
-            let choice = bag[self.rng.gen_range(0..bag.len())];
-            bundle.add(choice, 1);
-            let idx = resource_index(choice);
-            temp_counts[idx] = temp_counts[idx].saturating_sub(1);
-        }
-        Ok(bundle)
     }
 
     fn steal_random_resource(&mut self, player_idx: usize) -> Option<Resource> {
