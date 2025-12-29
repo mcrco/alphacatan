@@ -378,11 +378,16 @@ impl TuiApp {
                 Span::styled(
                     format!(
                         "{}K {}Y {}M {}R {}V",
-                        player.matured_dev_card_count(DevelopmentCard::Knight) + player.fresh_dev_card_count(DevelopmentCard::Knight),
-                        player.matured_dev_card_count(DevelopmentCard::YearOfPlenty) + player.fresh_dev_card_count(DevelopmentCard::YearOfPlenty),
-                        player.matured_dev_card_count(DevelopmentCard::Monopoly) + player.fresh_dev_card_count(DevelopmentCard::Monopoly),
-                        player.matured_dev_card_count(DevelopmentCard::RoadBuilding) + player.fresh_dev_card_count(DevelopmentCard::RoadBuilding),
-                        player.matured_dev_card_count(DevelopmentCard::VictoryPoint) + player.fresh_dev_card_count(DevelopmentCard::VictoryPoint),
+                        player.matured_dev_card_count(DevelopmentCard::Knight)
+                            + player.fresh_dev_card_count(DevelopmentCard::Knight),
+                        player.matured_dev_card_count(DevelopmentCard::YearOfPlenty)
+                            + player.fresh_dev_card_count(DevelopmentCard::YearOfPlenty),
+                        player.matured_dev_card_count(DevelopmentCard::Monopoly)
+                            + player.fresh_dev_card_count(DevelopmentCard::Monopoly),
+                        player.matured_dev_card_count(DevelopmentCard::RoadBuilding)
+                            + player.fresh_dev_card_count(DevelopmentCard::RoadBuilding),
+                        player.matured_dev_card_count(DevelopmentCard::VictoryPoint)
+                            + player.fresh_dev_card_count(DevelopmentCard::VictoryPoint),
                     ),
                     Style::default(),
                 ),

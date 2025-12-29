@@ -34,3 +34,6 @@ version = "1.18.1"
 features = [
     "v4",
 ]
+    
+[profile.release]
+debug = true

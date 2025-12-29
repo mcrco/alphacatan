@@ -57,6 +57,7 @@ pub struct GameState {
     pub node_occupancy: HashMap<NodeId, Structure>,
     pub road_occupancy: HashMap<EdgeId, usize>,
     pub actions: Vec<GameAction>,
+    all_edges: Vec<EdgeId>,
     available_actions: Vec<GameAction>,
     awaiting_roll: bool,
     discard_queue: VecDeque<usize>,
@@ -173,6 +174,7 @@ impl GameState {
 
         let mut rng = StdRng::seed_from_u64(config.seed);
         let map = CatanMap::build_with_rng(config.map_type, &mut rng);
+        let all_edges = collect_all_edges(&map);
         let robber_tile = map
             .tiles_by_id
             .values()
@@ -207,6 +209,7 @@ impl GameState {
             node_occupancy: HashMap::new(),
             road_occupancy: HashMap::new(),
             actions: Vec::new(),
+            all_edges,
             available_actions: Vec::new(),
             awaiting_roll: false,
             discard_queue: VecDeque::new(),
@@ -1232,15 +1235,18 @@ impl GameState {
             }
             ActionPrompt::BuildInitialRoad => {
                 if let Some(&anchor) = self.setup_pending_roads.get(&player_idx) {
-                    for edge in self.unique_edges() {
-                        if edge.0 != anchor && edge.1 != anchor {
-                            continue;
-                        }
-                        if self.validate_road_location(player_idx, edge, false).is_ok() {
-                            actions.push(
-                                GameAction::new(player_idx, ActionType::BuildRoad)
-                                    .with_payload(ActionPayload::Edge(edge)),
-                            );
+                    if let Some(edges) = self.map.node_edges.get(&anchor) {
+                        for edge in edges {
+                            let normalized = normalize_edge(*edge);
+                            if self
+                                .validate_road_location(player_idx, normalized, false)
+                                .is_ok()
+                            {
+                                actions.push(
+                                    GameAction::new(player_idx, ActionType::BuildRoad)
+                                        .with_payload(ActionPayload::Edge(normalized)),
+                                );
+                            }
                         }
                     }
                 }
@@ -1273,10 +1279,15 @@ impl GameState {
         }
         let player_idx = self.current_player;
         let player = &self.players[player_idx];
-        
-        let is_road_building = !player.road_limit_reached() && self.road_building_player == Some(player_idx) && self.road_building_free_roads > 0;
+        let mut edge_cache: Option<Vec<EdgeId>> = None;
+
+        let is_road_building = !player.road_limit_reached()
+            && self.road_building_player == Some(player_idx)
+            && self.road_building_free_roads > 0;
         if is_road_building {
-            for edge in self.unique_edges() {
+            let edges = edge_cache
+                .get_or_insert_with(|| self.network_edge_candidates(player_idx));
+            for &edge in edges.iter() {
                 if self.validate_road_location(player_idx, edge, true).is_ok() {
                     actions.push(
                         GameAction::new(player_idx, ActionType::BuildRoad)
@@ -1287,8 +1298,13 @@ impl GameState {
         }
 
         if !self.awaiting_roll {
-            if !is_road_building && !player.road_limit_reached() && player.resources.can_afford(&COST_ROAD) {
-                for edge in self.unique_edges() {
+            if !is_road_building
+                && !player.road_limit_reached()
+                && player.resources.can_afford(&COST_ROAD)
+            {
+                let edges = edge_cache
+                    .get_or_insert_with(|| self.network_edge_candidates(player_idx));
+                for &edge in edges.iter() {
                     if self.validate_road_location(player_idx, edge, true).is_ok() {
                         actions.push(
                             GameAction::new(player_idx, ActionType::BuildRoad)
@@ -1554,18 +1570,48 @@ impl GameState {
         }
     }
 
-    fn unique_edges(&self) -> Vec<EdgeId> {
-        let mut seen = HashSet::new();
+    fn network_edge_candidates(&self, player_idx: usize) -> Vec<EdgeId> {
+        let nodes = self.player_network_nodes(player_idx);
+        if nodes.is_empty() {
+            return self
+                .all_edges
+                .iter()
+                .copied()
+                .filter(|edge| !self.road_occupancy.contains_key(edge))
+                .collect();
+        }
+
         let mut edges = Vec::new();
-        for list in self.map.node_edges.values() {
-            for edge in list {
-                let normalized = normalize_edge(*edge);
-                if seen.insert(normalized) {
+        for node in nodes {
+            if let Some(list) = self.map.node_edges.get(&node) {
+                for edge in list {
+                    let normalized = normalize_edge(*edge);
+                    if self.road_occupancy.contains_key(&normalized) {
+                        continue;
+                    }
                     edges.push(normalized);
                 }
             }
         }
+        edges.sort_unstable();
+        edges.dedup();
         edges
+    }
+
+    fn player_network_nodes(&self, player_idx: usize) -> Vec<NodeId> {
+        let player = &self.players[player_idx];
+        let mut nodes = Vec::with_capacity(
+            player.roads.len() * 2 + player.settlements.len() + player.cities.len(),
+        );
+        for edge in &player.roads {
+            nodes.push(edge.0);
+            nodes.push(edge.1);
+        }
+        nodes.extend(player.settlements.iter().copied());
+        nodes.extend(player.cities.iter().copied());
+        nodes.sort_unstable();
+        nodes.dedup();
+        nodes
     }
 
     fn update_longest_road(&mut self) {
@@ -1677,6 +1723,20 @@ fn normalize_edge(edge: EdgeId) -> EdgeId {
     } else {
         (edge.1, edge.0)
     }
+}
+
+fn collect_all_edges(map: &CatanMap) -> Vec<EdgeId> {
+    let mut seen = HashSet::new();
+    let mut edges = Vec::new();
+    for list in map.node_edges.values() {
+        for edge in list {
+            let normalized = normalize_edge(*edge);
+            if seen.insert(normalized) {
+                edges.push(normalized);
+            }
+        }
+    }
+    edges
 }
 
 fn edge_contains_node(edge: EdgeId, node: NodeId) -> bool {
