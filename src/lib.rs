@@ -16,6 +16,3 @@ pub use board::Tile;
 pub use env::{Observation, PlayerObservation, RustEnv, StepResult};
 pub use game::{Game, GameConfig, GameState};
 pub use types::Color;
-
-#[cfg(feature = "python")]
-pub use env::python::{PyCatanEnv, create_module};

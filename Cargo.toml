@@ -5,11 +5,10 @@ edition = "2024"
 
 [lib]
 name = "catanatron_rs"
-crate-type = ["rlib", "cdylib"]
+crate-type = ["rlib"]
 
 [features]
 default = []
-python = ["pyo3", "numpy", "ndarray"]
 
 [dependencies]
 itertools = "0.12"
@@ -24,9 +23,6 @@ thiserror = "1.0"
 clap = { version = "4.5", features = ["derive"] }
 ratatui = "0.27"
 crossterm = "0.28"
-pyo3 = { version = "0.21", optional = true, features = ["extension-module", "abi3-py38"] }
-numpy = { version = "0.21", optional = true }
-ndarray = { version = "0.15", optional = true, features = ["std"] }
 plotters = { version = "0.3", features = ["bitmap_backend", "bitmap_encoder"] }
 
 [dependencies.uuid]

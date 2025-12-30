@@ -111,6 +111,3 @@ pub fn observation_from_state(state: &GameState) -> Observation {
             .collect(),
     }
 }
-
-#[cfg(feature = "python")]
-pub mod python;
